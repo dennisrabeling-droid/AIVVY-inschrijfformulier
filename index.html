@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIVVY – Klant Onboarding</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#111;--card:#1f1f1f;--border:#2e2e2e;--text:#e8e8e8;--muted:#888;--grad:linear-gradient(90deg,#ff3b3b,#ff9500,#ffe000,#34c759,#007aff,#bf5af2)}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+.rainbow{height:3px;background:var(--grad)}
+nav{display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(17,17,17,.95);backdrop-filter:blur(10px);z-index:100}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.nav-btns{display:flex;gap:8px}
+.nav-btn{background:none;border:1px solid var(--border);color:var(--muted);padding:8px 16px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.85rem;cursor:pointer;transition:all .2s}
+.nav-btn.active{border-color:#007aff;color:#007aff}
+.page{display:none}.page.active{display:block}
+.hero{text-align:center;padding:48px 24px 32px}
+.badge{display:inline-block;font-size:.72rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);border:1px solid var(--border);padding:5px 14px;border-radius:100px;margin-bottom:20px}
+h1{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(1.8rem,5vw,2.8rem);line-height:1.1;margin-bottom:14px}
+h1 span{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{color:var(--muted);font-size:.95rem;max-width:400px;margin:0 auto;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="rainbow"></div>
+<nav>
+  <div class="logo">AIVVY</div>
+  <div class="nav-btns">
+    <button class="nav-btn active" id="btn-form" onclick="showPage('form')">Formulier</button>
+    <button class="nav-btn" id="btn-admin" onclick="goAdmin()">Beheer</button>
+  </div>
+</nav>
+<div class="page active" id="page-form">
+  <div class="hero">
+    <div class="badge">Klant Onboarding</div>
+    <h1>Vertel ons over<br><span>jouw bedrijf</span></h1>
+    <p>Vul de gegevens in zodat wij jou zo goed mogelijk kunnen helpen met premium content.</p>
+  </div>
+  <div class="progress" id="prog">
+    <div class="step active" id="s0"></div>
+    <div class="step" id="s1"></div>
+    <div class="step" id="s2"></div>
+    <div class="step" id="s3"></div>
+    <div class="step" id="s4"></div>
+  </div>
+  <div class="form-wrap" id="form-wrap">
+  </div>
+</div>
+<div class="page" id="page-admin">
+  <div id="pw-screen" class="pw-screen">
+    <div class="logo" style="font-size:1.1rem;margin-bottom:18px">AIVVY Beheer</div>
+    <h3>Toegang vereist</h3>
+    <p>Voer het beheerderswachtwoord in</p>
+    <div class="pw-row">
+      <input type="password" id="pw" placeholder="Wachtwoord" onkeydown="if(event.key==='Enter')checkPw()">
+      <button onclick="checkPw()">Inloggen</button>
+    </div>
+    <div class="pw-err" id="pw-err">Onjuist wachtwoord</div>
+  </div>
+  <div id="admin-content" style="display:none">
+    <div class="admin-head"><h2>Klantoverzicht</h2><p>Alle ingediende formulieren</p></div>
+    <div class="admin-bar">
+      <div class="pill">Totaal: <strong id="total">0</strong></div>
+      <button class="btn-del" onclick="clearAll()">Verwijder alles</button>
+      <button class="btn-exp" onclick="exportCSV()">⬇ Exporteer CSV</button>
+    </div>
+    <div class="list" id="list"></div>
+  </div>
+</div>
+<script>
+const PW='aivvy2024';
+function showPage(p){
+  document.getElementById('page-form').classList.toggle('active',p==='form');
+  document.getElementById('page-admin').classList.toggle('active',p==='admin');
+  document.getElementById('btn-form').classList.toggle('active',p==='form');
+  document.getElementById('btn-admin').classList.toggle('active',p==='admin');
+}
+function goAdmin(){
+  showPage('admin');
+  if(sessionStorage.getItem('aivvy_ok')==='1')showAdmin();
+}
+function checkPw(){
+  if(document.getElementById('pw').value===PW){
+    sessionStorage.setItem('aivvy_ok','1');showAdmin();
+  } else {
+    document.getElementById('pw-err').style.display='block';
+    document.getElementById('pw').value='';
+  }
+}
+function showAdmin(){
+  document.getElementById('pw-screen').style.display='none';
+  document.getElementById('admin-content').style.display='block';
+  renderList();
+}
+function exportCSV(){
+  const clients=JSON.parse(localStorage.getItem('aivvy')||'[]');
+  if(!clients.length){alert('Geen gegevens.');return;}
+  const headers=Object.keys(clients[0]);
+  const rows=clients.map(c=>headers.map(h=>`"${(c[h]||'').replace(/"/g,'""')}"`).join(','));
+  const csv=[headers.join(','),...rows].join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='aivvy-klanten.csv';a.click();
+  URL.revokeObjectURL(url);
+}
+function clearAll(){
+  if(confirm('Alles verwijderen?')){localStorage.removeItem('aivvy');renderList();}
+}
+function renderList(){
+  const clients=JSON.parse(localStorage.getItem('aivvy')||'[]');
+  document.getElementById('total').textContent=clients.length;
+  const el=document.getElementById('list');
+  if(!clients.length){el.innerHTML='<div class="empty">📋 Nog geen klanten.</div>';return;}
+  el.innerHTML=clients.map((c,i)=>`
+    <div class="card">
+      <div class="card-head" onclick="toggle(${i})">
+        <div class="card-left">
+          <div class="avatar">${c.bedrijfsnaam.charAt(0).toUpperCase()}</div>
+          <div><div class="cname">${c.bedrijfsnaam}</div><div class="cmeta">${c.contactpersoon} · ${c.email}</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="cdate">${c.datum}</div>
+          <div class="chev" id="chev${i}">▼</div>
+        </div>
+      </div>
+      <div class="details" id="det${i}">
+        ${det('KVK',c.kvk)}${det('BTW',c.btw)}${det('Telefoon',c.telefoon)}
+        ${det('Omschrijving',c.omschrijving)}${det('Doelgroep',c.doelgroep)}
+        ${det('Platforms',c.platformsActief)}${det('Doelen',c.doelen)}
+      </div>
+    </div>`).join('');
+}
+function det(l,v){if(!v)return'';return`<div class="det"><label>${l}</label><p>${v}</p></div>`;}
+function toggle(i){
+  document.getElementById('det'+i).classList.toggle('open');
+  document.getElementById('chev'+i).classList.toggle('open');
+}
+</script>
+</body>
+</html>
